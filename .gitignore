@@ -1,0 +1,25 @@
+# Python Virtual Environment
+# Dieses Verzeichnis enthält alle installierten Bibliotheken und ist systemabhängig.
+# Es wird mit "pip install -r requirements.txt" neu erstellt.
+venv/
+
+# Sensible Konfigurationsdateien
+# Diese Datei enthält deine persönlichen Zugangsdaten.
+.env
+
+# Python Cache-Dateien und kompilierter Bytecode
+# Werden von Python automatisch zur Laufzeit erstellt.
+__pycache__/
+*.pyc
+
+# Log-Dateien
+# Protokolle der Anwendung sollten nicht versioniert werden.
+*.log
+
+# Betriebssystem-spezifische Dateien (macOS, Windows)
+.DS_Store
+Thumbs.db
+
+# Editor-/IDE-spezifische Ordner (z.B. für VS Code)
+.vscode/
+.idea/
