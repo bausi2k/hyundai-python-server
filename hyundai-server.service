@@ -1,0 +1,24 @@
+[Unit]
+Description=Hyundai/Kia Connect API Server (Python)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/hyundai-python-server # Neuer Pfad
+
+# Pfad zum Python-Interpreter in der venv!
+ExecStart=/home/pi/hyundai-python-server/venv/bin/python3 /home/pi/hyundai-python-server/hyundai_server.py
+
+EnvironmentFile=/home/pi/hyundai-python-server/.env # Neuer Pfad
+Restart=on-failure # Startet bei Fehlern neu
+RestartSec=10s     # Wartezeit vor Neustart
+# RuntimeMaxSec=6h # Periodischen Neustart erstmal weglassen
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
