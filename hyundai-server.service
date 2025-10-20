@@ -7,16 +7,21 @@ Wants=network-online.target
 Type=simple
 User=pi
 Group=pi
-WorkingDirectory=/home/pi/hyundai-python-server # Neuer Pfad
+# Define the working directory
+WorkingDirectory=/home/pi/hyundai-python-server
 
-# Pfad zum Python-Interpreter in der venv!
+# Make sure this path to python inside your venv is correct
 ExecStart=/home/pi/hyundai-python-server/venv/bin/python3 /home/pi/hyundai-python-server/hyundai_server.py
 
-EnvironmentFile=/home/pi/hyundai-python-server/.env # Neuer Pfad
-Restart=on-failure # Startet bei Fehlern neu
-RestartSec=10s     # Wartezeit vor Neustart
-# RuntimeMaxSec=6h # Periodischen Neustart erstmal weglassen
+# Use the full, verified path to the .env file
+EnvironmentFile=/home/pi/hyundai-python-server/.env
 
+# Restart policy (comments on separate lines)
+Restart=on-failure
+# Wait 10 seconds before restarting
+RestartSec=10
+
+# Logging
 StandardOutput=journal
 StandardError=journal
 
