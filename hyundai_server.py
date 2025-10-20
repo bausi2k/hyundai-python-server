@@ -147,7 +147,7 @@ async def execute_vehicle_action(command, *args, **kwargs):
 # --- API Endpoints ---
 apiInfo = {
   "description": "Hyundai/Kia Connect API Server (Python)",
-  "version": "1.0.5", # Updated version
+  "version": "1.1.0", # <-- Update this line
   "endpoints": [
     { "path": "/", "method": "GET", "description": "Shows welcome message and link to /info." },
     { "path": "/info", "method": "GET", "description": "Shows this API information." },
@@ -191,11 +191,35 @@ async def route_status_refresh():
     try:
         if not vm: raise ConnectionError("VehicleManager not initialized.")
         vm.check_and_refresh_token()
+
         vehicle = find_vehicle()
-        logging.debug(f"Forcing refresh via vehicle.update() for {VIN}...")
-        await vehicle.update() # Correct refresh method on Vehicle
-        logging.debug("Refresh complete.")
-        return create_response(endpoint_name, data=vehicle.data) # Return updated data
+        vehicle_internal_id = vehicle.id
+        if not vehicle_internal_id:
+            return create_response(endpoint_name, success=False, error_message="Could not find internal vehicle ID.", status_code=500)
+
+        logging.debug(f"Forcing refresh via vm.force_refresh_vehicle_state({vehicle_internal_id})...")
+        # Call the synchronous method
+        vm.force_refresh_vehicle_state(vehicle_internal_id)
+        logging.debug("Refresh request initiated. Waiting for car to respond...")
+
+        # Wait for the car/server to process (adjust delay if needed)
+        await asyncio.sleep(20) # Increased wait time slightly
+
+        logging.debug("Attempting to update cache after refresh delay...")
+        vm.update_all_vehicles_with_cached_state() # Update the cache
+        logging.debug("Cache update attempt complete.")
+
+        updated_vehicle = find_vehicle() # Get the potentially updated vehicle data
+        return create_response(endpoint_name, data=updated_vehicle.data)
+
+        # --- FIX: Catch DuplicateRequestError using the 'hke' alias ---
+    except hke.DuplicateRequestError as dre:
+        logging.warning(f"DuplicateRequestError during /status/refresh: {dre}. Tell user to wait.")
+        # Return a 429 Too Many Requests status code
+        return create_response(endpoint_name, success=False,
+                               error_message="Duplicate request detected. Please wait a minute before trying again.",
+                               status_code=429)
+    # -----------------------------------------------------------
     except Exception as e:
         logging.error(f"Exception during /status/refresh route:", exc_info=True)
         return create_response(endpoint_name, success=False, error_message=e, status_code=500)
@@ -211,10 +235,17 @@ async def route_lock():
         vehicle_internal_id = vehicle.id
         if not vehicle_internal_id:
              return create_response(endpoint_name, success=False, error_message="Could not find internal vehicle ID.", status_code=500)
+
         logging.debug(f"Calling vm.lock for Vehicle ID {vehicle_internal_id} (VIN {VIN})...")
         result = vm.lock(vehicle_id=vehicle_internal_id) # Sync call
         logging.debug("vm.lock executed.")
         return create_response(endpoint_name, data={"result": result})
+
+    # --- FIX: Catch DuplicateRequestError ---
+    except hke.DuplicateRequestError as dre:
+        logging.warning(f"DuplicateRequestError during /lock: {dre}. Tell user to wait.")
+        return create_response(endpoint_name, success=False, error_message="Duplicate request detected. Please wait a minute before trying again.", status_code=429)
+    # ----------------------------------------
     except Exception as e:
         logging.error(f"Exception during /lock route:", exc_info=True)
         return create_response(endpoint_name, success=False, error_message=e, status_code=500)
@@ -229,14 +260,20 @@ async def route_unlock():
         vehicle_internal_id = vehicle.id
         if not vehicle_internal_id:
              return create_response(endpoint_name, success=False, error_message="Could not find internal vehicle ID.", status_code=500)
+
         logging.debug(f"Calling vm.unlock for Vehicle ID {vehicle_internal_id} (VIN {VIN})...")
         result = vm.unlock(vehicle_id=vehicle_internal_id) # Sync call
         logging.debug("vm.unlock executed.")
         return create_response(endpoint_name, data={"result": result})
+
+    # --- FIX: Catch DuplicateRequestError ---
+    except hke.DuplicateRequestError as dre:
+        logging.warning(f"DuplicateRequestError during /unlock: {dre}. Tell user to wait.")
+        return create_response(endpoint_name, success=False, error_message="Duplicate request detected. Please wait a minute before trying again.", status_code=429)
+    # ----------------------------------------
     except Exception as e:
         logging.error(f"Exception during /unlock route:", exc_info=True)
         return create_response(endpoint_name, success=False, error_message=e, status_code=500)
-
 @app.route('/climate/start', methods=['POST'])
 async def route_climate_start():
     endpoint_name = "climate_start"
