@@ -1,8 +1,8 @@
 import pytest
 from flask import Flask
 # Assuming your server script is named hyundai_server.py and is in the parent directory
-from hyundai_server import app as flask_app  # Import the Flask app instance
-from hyundai_server import find_vehicle  # Import the helper function
+from ..hyundai_server import app as flask_app # Use .. for parent directory
+from ..hyundai_server import find_vehicle   # Use .. for parent directory
 from unittest.mock import MagicMock  # For creating mock objects
 
 
