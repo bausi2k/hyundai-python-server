@@ -143,8 +143,9 @@ async def execute_vehicle_action(command, *args, **kwargs):
 
 # --- API Endpoints ---
 apiInfo = { # Behalte die Endpunkte, die du wirklich brauchst
-  "description": "Hyundai/Kia Connect API Server (Python)", "version": "1.1.0",
-  "endpoints": [
+    "description": "Hyundai/Kia Connect API Server (Python)",
+    "version": "1.2.0", # <-- HIER ÄNDERN
+    "endpoints": [
     { "path": "/", "method": "GET", "description": "Welcome message." },
     { "path": "/info", "method": "GET", "description": "API Information." },
     { "path": "/status", "method": "GET", "description": "Cached vehicle status." },
