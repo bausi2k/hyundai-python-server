@@ -7,23 +7,19 @@ Wants=network-online.target
 Type=simple
 User=pi
 Group=pi
-# Define the working directory
 WorkingDirectory=/home/pi/hyundai-python-server
 
-# Make sure this path to python inside your venv is correct
+
 ExecStart=/home/pi/hyundai-python-server/venv/bin/python3 /home/pi/hyundai-python-server/hyundai_server.py
 
-# Use the full, verified path to the .env file
 EnvironmentFile=/home/pi/hyundai-python-server/.env
-
-# Restart policy (comments on separate lines)
 Restart=on-failure
-# Wait 10 seconds before restarting
 RestartSec=10
+# RuntimeMaxSec=6h # Optional: Periodischen Neustart bei Bedarf wieder hinzufügen
 
-# Logging
-StandardOutput=journal
-StandardError=journal
+# StandardOutput/Error nicht mehr auf journal setzen, da das Skript in eine Datei loggt
+# StandardOutput=null
+# StandardError=null # Oder lasse sie weg, systemd loggt dann Start/Stop-Ereignisse
 
 [Install]
 WantedBy=multi-user.target
