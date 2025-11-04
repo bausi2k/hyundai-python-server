@@ -1,11 +1,4 @@
-Nein, das letzte README, das wir erstellt haben, ist **nicht mehr 100% aktuell**, weil du danach noch Code-Änderungen vorgenommen hast.
 
-Hier sind die Punkte, die wir im `README.md` aktualisieren sollten, um es an deinen "bereinigten" Server-Code (Version 1.1.0) anzupassen:
-
-1.  **API-Endpunkte:** Wir müssen die Endpunkte `/odometer`, `/odometer/refresh` und `/location` aus der API-Liste im README entfernen, da du sie aus dem Server-Skript gelöscht hast.
-2.  **Tests:** Wir haben `pytest`, `pytest-mock` und `pytest-asyncio` installiert und eine Test-Suite (`tests/test_server.py`) erstellt. Dieser ganze Abschnitt zur Installation und Ausführung der Tests fehlt im README noch.
-
------
 
 ## Aktualisiertes `README.md` (Version 1.1.0)
 
@@ -13,7 +6,7 @@ Hier ist eine aktualisierte Version deines `README.md`. Ich habe die Endpunktlis
 
 Du kannst den Inhalt deiner `README.md`-Datei mit `vi README.md` durch diesen Text ersetzen:
 
-````markdown
+
 # Hyundai/Kia Connect API Server (Python)
 
 ## 1. Übersicht
