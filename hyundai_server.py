@@ -4,7 +4,7 @@ import json
 import traceback
 import logging
 import threading
-import requests # Für Synology
+import requests
 from logging.handlers import TimedRotatingFileHandler
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
@@ -15,16 +15,13 @@ load_dotenv()
 
 # --- Logging Setup ---
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-# Log file path relative to script execution (works for Docker and local)
 log_file = "hyundai_server.log"
 
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-# Rotiert täglich, behält 7 Tage
 file_handler = TimedRotatingFileHandler(log_file, when='midnight', backupCount=7, encoding='utf-8')
 file_handler.setFormatter(log_formatter)
 
-# Console Handler für Docker Logs (damit man es mit 'docker logs' sieht)
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(log_formatter)
 
@@ -52,18 +49,14 @@ REGION_ID, BRAND_ID, SERVER_PORT = None, None, None
 
 # --- Helper: Synology Alert ---
 def send_synology_alert(message):
-    """Sendet eine Nachricht an Synology Chat asynchron."""
     if not SYNOLOGY_CHAT_ENABLED or not SYNOLOGY_CHAT_URL:
         return
-
     def _send():
         try:
-            # Synology Webhook Format
             payload = {"text": f"🚨 **Hyundai Server Alert**\n\n{message}"}
             requests.post(SYNOLOGY_CHAT_URL, data={'payload': json.dumps(payload)}, timeout=10)
         except Exception as e:
             logging.error(f"Failed to send Synology alert: {e}")
-
     threading.Thread(target=_send).start()
 
 # --- Validation ---
@@ -85,32 +78,36 @@ except ValueError as e:
 
 # --- Global Vehicle Manager Instance ---
 vm = None
-try:
-    logging.info("Initializing VehicleManager...")
-    vm = VehicleManager(region=REGION_ID, brand=BRAND_ID, username=USERNAME, password=PASSWORD, pin=PIN)
-    logging.info("Performing initial login/token refresh...")
-    vm.check_and_refresh_token()
-    logging.info("Performing initial vehicle cache update...")
-    vm.update_all_vehicles_with_cached_state()
-    logging.info("✅ SUCCESS: VehicleManager initialized and logged in.")
 
-    # Initial Check
-    vehicle_found = any(getattr(v, 'VIN', None) == VIN for v in vm.vehicles.values()) if vm.vehicles else False
-    if not vehicle_found:
-        msg = f"⚠️ WARNING: Vehicle with VIN {VIN} not found in initial cache."
-        logging.warning(msg)
+def initialize_vehicle_manager():
+    global vm
+    try:
+        logging.info("Initializing VehicleManager...")
+        vm = VehicleManager(region=REGION_ID, brand=BRAND_ID, username=USERNAME, password=PASSWORD, pin=PIN)
+        logging.info("Performing initial login/token refresh...")
+        vm.check_and_refresh_token()
+        logging.info("Performing initial vehicle cache update...")
+        vm.update_all_vehicles_with_cached_state()
+        logging.info("✅ SUCCESS: VehicleManager initialized and logged in.")
+
+        vehicle_found = any(getattr(v, 'VIN', None) == VIN for v in vm.vehicles.values()) if vm.vehicles else False
+        if not vehicle_found:
+            msg = f"⚠️ WARNING: Vehicle with VIN {VIN} not found in initial cache."
+            logging.warning(msg)
+            send_synology_alert(msg)
+
+    except hke.AuthenticationError as auth_err:
+        msg = f"[FATAL] Authentication failed during startup! Error: {auth_err}"
+        logging.error(msg)
         send_synology_alert(msg)
+        exit()
+    except Exception as e:
+        msg = f"[FATAL] Failed to initialize VehicleManager during startup! Error: {e}"
+        logging.error(msg, exc_info=True)
+        send_synology_alert(msg)
+        exit()
 
-except hke.AuthenticationError as auth_err:
-    msg = f"[FATAL] Authentication failed during startup! Error: {auth_err}"
-    logging.error(msg)
-    send_synology_alert(msg)
-    exit()
-except Exception as e:
-    msg = f"[FATAL] Failed to initialize VehicleManager during startup! Error: {e}"
-    logging.error(msg, exc_info=True)
-    send_synology_alert(msg)
-    exit()
+initialize_vehicle_manager()
 
 # --- Flask App ---
 app = Flask(__name__)
@@ -130,7 +127,6 @@ def create_response(endpoint_name, success=True, data=None, error_message=None, 
             logging.warning(log_msg)
         else:
             logging.error(log_msg)
-            # Alert on server errors
             send_synology_alert(f"Error on endpoint `{endpoint_name}`:\n```{error_message}```")
             
     return jsonify(response_body), status_code
@@ -153,24 +149,6 @@ async def force_refresh():
     logging.debug("Refresh complete.")
     return find_vehicle()
 
-async def execute_vehicle_action(command, *args, **kwargs):
-    global vm;
-    if not vm: raise ConnectionError("VM not initialized")
-    try:
-        vm.check_and_refresh_token()
-        vehicle = find_vehicle()
-        method_to_call = getattr(vehicle, command)
-        if not callable(method_to_call): raise AttributeError(f"'{command}' is not callable.")
-        
-        if asyncio.iscoroutinefunction(method_to_call):
-            result = await method_to_call(*args, **kwargs)
-        else:
-            result = method_to_call(*args, **kwargs)
-        return result
-    except Exception as e:
-        logging.error(f"EXCEPTION during execute_vehicle_action for '{command}'", exc_info=True)
-        raise e
-
 # --- Routes ---
 @app.route('/', methods=['GET'])
 def route_root():
@@ -178,11 +156,12 @@ def route_root():
 
 @app.route('/info', methods=['GET'])
 def route_info():
-    return create_response("info", data={"version": "1.2.0", "endpoints": ["/status", "/status/refresh", "/lock", "/unlock", "/climate/start", "/climate/stop", "/charge/start", "/charge/stop"]})
+    return create_response("info", data={"version": "1.2.1", "endpoints": ["/status", "/status/refresh", "/lock", "/unlock", "/climate/start", "/climate/stop", "/charge/start", "/charge/stop"]})
 
 @app.route('/status', methods=['GET'])
 async def route_status_cached():
     try:
+        if not vm: raise ConnectionError("VM not initialized")
         vm.check_and_refresh_token()
         vm.update_all_vehicles_with_cached_state()
         vehicle = find_vehicle()
@@ -203,22 +182,37 @@ async def route_status_refresh():
 @app.route('/lock', methods=['POST'])
 async def route_lock():
     try:
-        result = await execute_vehicle_action("lock")
+        if not vm: raise ConnectionError("VM not initialized")
+        vm.check_and_refresh_token()
+        vehicle = find_vehicle()
+        logging.debug(f"Calling vm.lock for {vehicle.id}...")
+        # FIX: Aufruf direkt auf vm
+        result = vm.lock(vehicle.id)
         return create_response("lock", data={"result": result})
-    except hke.DuplicateRequestError: return create_response("lock", success=False, error_message="Wait.", status_code=429)
-    except Exception as e: return create_response("lock", success=False, error_message=e, status_code=500)
+    except hke.DuplicateRequestError:
+        return create_response("lock", success=False, error_message="Wait.", status_code=429)
+    except Exception as e:
+        return create_response("lock", success=False, error_message=e, status_code=500)
 
 @app.route('/unlock', methods=['POST'])
 async def route_unlock():
     try:
-        result = await execute_vehicle_action("unlock")
+        if not vm: raise ConnectionError("VM not initialized")
+        vm.check_and_refresh_token()
+        vehicle = find_vehicle()
+        logging.debug(f"Calling vm.unlock for {vehicle.id}...")
+        # FIX: Aufruf direkt auf vm
+        result = vm.unlock(vehicle.id)
         return create_response("unlock", data={"result": result})
-    except hke.DuplicateRequestError: return create_response("unlock", success=False, error_message="Wait.", status_code=429)
-    except Exception as e: return create_response("unlock", success=False, error_message=e, status_code=500)
+    except hke.DuplicateRequestError:
+        return create_response("unlock", success=False, error_message="Wait.", status_code=429)
+    except Exception as e:
+        return create_response("unlock", success=False, error_message=e, status_code=500)
 
 @app.route('/climate/start', methods=['POST'])
 async def route_climate_start():
     try:
+        if not vm: raise ConnectionError("VM not initialized")
         vm.check_and_refresh_token()
         data = request.get_json(silent=True) or {}
         set_temp = data.get('temperature')
@@ -234,38 +228,94 @@ async def route_climate_start():
 
         options = ClimateRequestOptions(set_temp=temp_val, defrost=bool(defrost), climate=bool(climate), heating=bool(heating))
         vehicle = find_vehicle()
-        # Use vm method with internal ID
         result = vm.start_climate(vehicle_id=vehicle.id, options=options)
         return create_response("climate_start", data={"result": result})
-    except hke.DuplicateRequestError: return create_response("climate_start", success=False, error_message="Wait.", status_code=429)
-    except Exception as e: return create_response("climate_start", success=False, error_message=e, status_code=500)
+    except hke.DuplicateRequestError:
+        return create_response("climate_start", success=False, error_message="Wait.", status_code=429)
+    except Exception as e:
+        return create_response("climate_start", success=False, error_message=e, status_code=500)
 
 @app.route('/climate/stop', methods=['POST'])
 async def route_climate_stop():
     try:
+        if not vm: raise ConnectionError("VM not initialized")
         vm.check_and_refresh_token()
         vehicle = find_vehicle()
-        # Use vm method with internal ID
         result = vm.stop_climate(vehicle_id=vehicle.id)
         return create_response("climate_stop", data={"result": result})
-    except hke.DuplicateRequestError: return create_response("climate_stop", success=False, error_message="Wait.", status_code=429)
-    except Exception as e: return create_response("climate_stop", success=False, error_message=e, status_code=500)
+    except hke.DuplicateRequestError:
+        return create_response("climate_stop", success=False, error_message="Wait.", status_code=429)
+    except Exception as e:
+        return create_response("climate_stop", success=False, error_message=e, status_code=500)
 
 @app.route('/charge/start', methods=['POST'])
 async def route_charge_start():
     try:
-        result = await execute_vehicle_action("start_charge")
+        if not vm: raise ConnectionError("VM not initialized")
+        vm.check_and_refresh_token()
+        vehicle = find_vehicle()
+        logging.debug(f"Calling vm.start_charge for {vehicle.id}...")
+        # FIX: Aufruf direkt auf vm
+        result = vm.start_charge(vehicle.id)
         return create_response("charge_start", data={"result": result})
-    except hke.DuplicateRequestError: return create_response("charge_start", success=False, error_message="Wait.", status_code=429)
-    except Exception as e: return create_response("charge_start", success=False, error_message=e, status_code=500)
+    except hke.DuplicateRequestError:
+        return create_response("charge_start", success=False, error_message="Wait.", status_code=429)
+    except Exception as e:
+        return create_response("charge_start", success=False, error_message=e, status_code=500)
 
 @app.route('/charge/stop', methods=['POST'])
 async def route_charge_stop():
     try:
-        result = await execute_vehicle_action("stop_charge")
+        if not vm: raise ConnectionError("VM not initialized")
+        vm.check_and_refresh_token()
+        vehicle = find_vehicle()
+        logging.debug(f"Calling vm.stop_charge for {vehicle.id}...")
+        # FIX: Aufruf direkt auf vm
+        result = vm.stop_charge(vehicle.id)
         return create_response("charge_stop", data={"result": result})
-    except hke.DuplicateRequestError: return create_response("charge_stop", success=False, error_message="Wait.", status_code=429)
-    except Exception as e: return create_response("charge_stop", success=False, error_message=e, status_code=500)
+    except hke.DuplicateRequestError:
+        return create_response("charge_stop", success=False, error_message="Wait.", status_code=429)
+    except Exception as e:
+        return create_response("charge_stop", success=False, error_message=e, status_code=500)
+
+@app.route('/odometer', methods=['GET'])
+async def route_odometer_cached():
+    try:
+        if not vm: raise ConnectionError("VM not initialized")
+        vm.check_and_refresh_token()
+        vm.update_all_vehicles_with_cached_state()
+        vehicle = find_vehicle()
+        odometer = getattr(vehicle, 'odometer_in_km', None)
+        if odometer is None: return create_response("odometer_cached", success=False, error_message="No data.", status_code=404)
+        return create_response("odometer_cached", data={"odometer": odometer, "unit": "km"})
+    except Exception as e:
+        return create_response("odometer_cached", success=False, error_message=e, status_code=500)
+
+@app.route('/odometer/refresh', methods=['GET'])
+async def route_odometer_refresh():
+    try:
+        vehicle = await force_refresh()
+        odometer = getattr(vehicle, 'odometer_in_km', None)
+        if odometer is None: return create_response("odometer_live", success=False, error_message="No data.", status_code=404)
+        return create_response("odometer_live", data={"odometer": odometer, "unit": "km"})
+    except hke.DuplicateRequestError:
+        return create_response("odometer_live", success=False, error_message="Wait.", status_code=429)
+    except Exception as e:
+        return create_response("odometer_live", success=False, error_message=e, status_code=500)
+
+@app.route('/location', methods=['GET'])
+async def route_location():
+    try:
+        vehicle = await force_refresh()
+        loc_time = getattr(vehicle, 'location_last_updated_at', None)
+        coords = getattr(vehicle, 'location_coordinate', None)
+        if not loc_time or not coords: return create_response("location", success=False, error_message="No data.", status_code=404)
+        data = {"latitude": coords.latitude, "longitude": coords.longitude, "altitude": coords.altitude, "last_updated": loc_time.isoformat()}
+        return create_response("location", data=data)
+    except hke.DuplicateRequestError:
+        return create_response("location", success=False, error_message="Wait.", status_code=429)
+    except Exception as e:
+        return create_response("location", success=False, error_message=e, status_code=500)
 
 
 @app.errorhandler(Exception)
