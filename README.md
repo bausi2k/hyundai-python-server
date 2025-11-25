@@ -1,193 +1,247 @@
 
+# Hyundai/Kia Connect API Server (Python) - v1.2.0
 
-## Aktualisiertes `README.md` (Version 1.1.0)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/Docker-Supported-2496ED.svg)](https://www.docker.com/)
 
-Hier ist eine aktualisierte Version deines `README.md`. Ich habe die Endpunktliste bereinigt und einen neuen Abschnitt "6. Tests (Optional)" hinzugefügt.
+**Navigation / Sprache wählen:**
+[🇺🇸 **English Version**](#-english-version) | [🇦🇹 **Deutsche Version**](#-deutsche-version)
 
-Du kannst den Inhalt deiner `README.md`-Datei mit `vi README.md` durch diesen Text ersetzen:
+---
 
+<a name="english-version"></a>
+## 🇺🇸 English Version
 
-# Hyundai/Kia Connect API Server (Python)
+### 1. Overview
+This project provides a robust Python Flask API server to interact with Hyundai and Kia vehicles via their Bluelink/UVO Connect services. It leverages the **`hyundai_kia_connect_api`** library and is designed to run as a **Docker container** on a Raspberry Pi or any Linux system.
 
-## 1. Übersicht
+**Key Features:**
+* **Status Retrieval:** Get cached status (fast) or force a live refresh from the car (slow).
+* **Remote Control:** Lock/Unlock, Climate Control, Start/Stop Charging.
+* **Reliability:** Automatic token management and session refreshing.
+* **Monitoring:** Integrated **Synology Chat** webhooks for critical error alerts.
+* **Dockerized:** Easy deployment via Docker Compose.
 
-Dieser Python-Server bietet eine einfache HTTP-API zur Interaktion mit Hyundai/Kia Fahrzeugen über die Bluelink/Connect-Dienste. Er nutzt die **`hyundai_kia_connect_api`** Python-Bibliothek ([GitHub](https://github.com/Hyundai-Kia-Connect/hyundai_kia_connect_api)) und ist für den Betrieb auf einem Raspberry Pi (oder einem ähnlichen Linux-System) konzipiert. Der Server kann als `systemd`-Dienst eingerichtet werden, um automatisch beim Systemstart zu laufen.
+### 2. Prerequisites
+* A system with Docker & Docker Compose installed.
+* Valid Hyundai Bluelink or Kia Connect credentials.
+* (Optional) Synology Chat Webhook URL for notifications.
 
-Die API-Antworten enthalten ein `command_invoked`-Feld, um die Weiterverarbeitung in Tools wie Node-RED zu erleichtern.
+### 3. Installation & Setup (Docker)
 
-## 2. Voraussetzungen
+This is the recommended way to run the server.
 
-* Ein Raspberry Pi oder ein anderes Linux-System (Entwicklung auf macOS).
-* Python 3 (z.B. 3.9 oder neuer).
-* `pip` (Python Package Installer).
-* `git` (optional, für Klonen oder Versionierung).
-* Zugangsdaten für deinen Hyundai Bluelink / Kia Connect Account (Benutzername, Passwort, PIN, FIN/VIN).
-
-## 3. Setup und Installation
-
-### 3.1. Projektverzeichnis und Umgebung
-
-1.  **Verzeichnis erstellen und wechseln:**
-    ```bash
-    mkdir -p /home/pi/hyundai-python-server 
-    cd /home/pi/hyundai-python-server
-    ```
-2.  **Python Virtual Environment erstellen & aktivieren:**
-    ```bash
-    sudo apt update && sudo apt install python3-venv -y # Falls venv fehlt
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-    *(Dein Prompt sollte nun `(venv)` anzeigen)*
-
-### 3.2. Abhängigkeiten installieren
-
-1.  **Erstelle eine `requirements.txt`-Datei** (`vi requirements.txt`) mit folgendem Inhalt (oder den Versionen, die bei dir funktionieren):
-    ```text
-    hyundai-kia-connect-api>=3.48.1 # Mindestens diese Version oder neuer
-    Flask[async]>=3.0.0 # Flask mit Async-Support
-    python-dotenv>=1.0.0
-    # Optional für Tests:
-    # pytest
-    # pytest-mock
-    # pytest-asyncio
-    # pytest-flask-async
-    ```
-2.  **Installiere die Abhängigkeiten:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-### 3.3. Server-Skript
-
-1.  **Erstelle die Datei `hyundai_server.py`** (`vi hyundai_server.py`).
-2.  **Füge den Python-Code** für den Flask-Server (aus `hyundai_server.py` im Repo) in diese Datei ein.
-
-### 3.4. Konfigurationsdatei (`.env`)
-
-1.  **Erstelle die Datei `.env`** (`vi .env`) im Projektverzeichnis.
-2.  **Füge deine Zugangsdaten ein:**
-    ```ini
-    BLUELINK_USERNAME=dein_benutzername@example.com
-    BLUELINK_PASSWORD=DeinPasswort
-    BLUELINK_PIN=1234
-    BLUELINK_VIN=DEINE17STELLIGEVINXYZ
-    # Numerische IDs verwenden!
-    BLUELINK_REGION_ID=1 # 1 = Europe
-    BLUELINK_BRAND_ID=2  # 1 = Kia, 2 = Hyundai
-    BLUELINK_LANGUAGE=de # Optional: z.B. en, de, fr ...
-    PORT=8080 # Optionaler Port für den Server
-    LOG_LEVEL=INFO # DEBUG, INFO, WARNING, ERROR
-    ```
-3.  **Berechtigungen setzen:**
-    ```bash
-    chmod 600 .env
-    ```
-
-## 4. Server manuell starten (zum Testen)
-
-1.  **Aktiviere die virtuelle Umgebung:** `source venv/bin/activate`
-2.  **Starte den Server:** `python3 hyundai_server.py`
-3.  Der Server sollte starten und auf Port 8080 (oder dem in `.env` definierten Port) lauschen. Mit `Strg+C` beenden.
-
-## 5. API Endpunkte
-
-Eine Übersicht der verfügbaren Endpunkte erhältst du über den `/info`-Endpunkt des laufenden Servers (z.B. `http://<IP_DEINES_PI>:8080/info`).
-
-* `GET /info`: Übersicht der API.
-* `GET /status`: Gecachter Fahrzeugstatus (aktualisiert Cache vor dem Lesen).
-* `GET /status/refresh`: Erzwingt Update vom Auto und gibt aktuellen Status zurück.
-* `POST /lock`, `POST /unlock`: Türen ver-/entriegeln.
-* `POST /climate/start`, `POST /climate/stop`: Klimaanlage steuern. (Body für start: `{"temperature": 21, "defrost": false, "climate": true, "heating": false}`)
-* `POST /charge/start`, `POST /charge/stop`: Laden steuern.
-
-## 6. Tests (Optional)
-
-Das Projekt enthält eine Test-Suite mit `pytest`, um die Funktionalität der Endpunkte zu überprüfen, ohne echte API-Aufrufe zu tätigen (mittels "Mocking").
-
-### 6.1. Test-Abhängigkeiten installieren
-
-(Falls noch nicht in `requirements.txt` geschehen)
+#### 3.1 Clone Repository
 ```bash
-pip install pytest pytest-mock pytest-asyncio pytest-flask-async
-pip freeze > requirements.txt # requirements.txt aktualisieren
+git clone [https://github.com/bausi2k/hyundai-python-server.git](https://github.com/bausi2k/hyundai-python-server.git)
+cd hyundai-python-server
 ````
 
-### 6.2. Test-Verzeichnis erstellen
+#### 3.2 Configuration (`.env`)
 
-Erstelle den Ordner `tests` und die Testdatei:
-
-```bash
-mkdir tests
-vi tests/test_server.py
-```
-
-Füge den Code aus `tests/test_server.py` (aus dem Git-Repository) in diese Datei ein.
-
-### 6.3. Tests ausführen
-
-Führe die Tests vom **Hauptverzeichnis** des Projekts aus:
+Create a `.env` file in the project directory:
 
 ```bash
-# Stelle sicher, dass du in /home/pi/hyundai-python-server bist
-PYTHONPATH=. pytest -v
+vi .env
 ```
 
-  * `PYTHONPATH=.` teilt Python mit, dass es Module (wie `hyundai_server`) auch im aktuellen Verzeichnis suchen soll.
-
-## 7\. Server als `systemd`-Dienst einrichten (Automatischer Start auf dem Pi)
-
-### 7.1. `systemd`-Service-Unit-Datei erstellen
-
-Erstelle/Bearbeite die Service-Datei (z.B. `hyundai-server.service`) mit `sudo vi /etc/systemd/system/hyundai-server.service`:
+Paste the following content and adapt it to your needs:
 
 ```ini
-[Unit]
-Description=Hyundai/Kia Connect API Server (Python)
-After=network-online.target
-Wants=network-online.target
+# --- Credentials ---
+BLUELINK_USERNAME=your_email@example.com
+BLUELINK_PASSWORD=YourPassword
+BLUELINK_PIN=1234
+BLUELINK_VIN=YOUR_17_DIGIT_VIN
 
-[Service]
-Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/hyundai-python-server
+# --- Configuration ---
+# 1 = Europe, 2 = USA, 3 = Canada
+BLUELINK_REGION_ID=1
+# 1 = Kia, 2 = Hyundai
+BLUELINK_BRAND_ID=2
+# Internal container port (keep as 8080)
+PORT=8080
+# Logging (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL=INFO
 
-# Wichtig: Pfad zum Python-Interpreter IN DER VENV verwenden!
-ExecStart=/home/pi/hyundai-python-server/venv/bin/python3 /home/pi/hyundai-python-server/hyundai_server.py
-
-EnvironmentFile=/home/pi/hyundai-python-server/.env
-Restart=on-failure
-RestartSec=10
-# RuntimeMaxSec=6h # Optional: Periodischen Neustart bei Bedarf wieder hinzufügen
-
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
+# --- Synology Chat Alerts (Optional) ---
+SYNOLOGY_CHAT_ENABLED=true
+SYNOLOGY_CHAT_URL=https://your-synology-url/webapi/entry.cgi?api=SYNO.Chat.External&method=incoming&version=2&token=...
 ```
 
-### 7.2. Dienst verwalten
+#### 3.3 Start Server
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable hyundai-server.service # Für Autostart
-sudo systemctl start hyundai-server.service  # Jetzt starten
+docker compose up -d --build
 ```
 
-### 7.3. Status und Logs prüfen
+The server will be accessible at `http://<YOUR-PI-IP>:8444` (default external port defined in `docker-compose.yml`).
 
-  * **Status:** `sudo systemctl status hyundai-server.service`
-  * **Logs (Live):** `sudo journalctl -u hyundai-server.service -f`
-  * **Logs (Neustart):** `sudo journalctl -u hyundai-server.service -b`
-  * **Datei-Logs:** Das Python-Skript selbst schreibt Logs nach `/home/pi/hyundai-python-server/hyundai_server.log` (mit täglicher Rotation).
+#### 3.4 View Logs
 
-## 8\. Wichtige Hinweise / Troubleshooting
+```bash
+docker compose logs -f
+```
 
-  * **Zugangsdaten:** Korrektheit in `.env` ist entscheidend. `AuthenticationError` in den Logs deutet auf falsche Daten hin.
-  * **Bibliothek:** Verwendet `hyundai_kia_connect_api`. Bei API-Änderungen seitens Hyundai/Kia ist evtl. ein Update nötig (`pip install --upgrade hyundai-kia-connect_api`).
-  * **Logs:** Immer die Datei-Logs oder `journalctl` prüfen.
+### 4\. API Endpoints
+
+You can check available endpoints via `GET /info`.
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/info` | Returns API info and version. |
+| `GET` | `/status` | Returns **cached** vehicle status (fast response). |
+| `GET` | `/status/refresh` | Forces a **live update** from the car (takes \~20s). |
+| `POST` | `/lock` | Locks the vehicle. |
+| `POST` | `/unlock` | Unlocks the vehicle. |
+| `POST` | `/climate/start` | Starts climate. JSON Body: `{"temperature": 21, "defrost": false}` |
+| `POST` | `/climate/stop` | Stops climate. |
+| `POST` | `/charge/start` | Starts charging. |
+| `POST` | `/charge/stop` | Stops charging. |
+| `GET` | `/odometer` | Returns odometer reading (cached). |
+| `GET` | `/odometer/refresh`| Returns odometer reading (live). |
+| `GET` | `/location` | Returns GPS location (live). |
+
+### 5\. Node-RED Integration
+
+The API returns JSON responses containing a `"command_invoked"` field. Typical flow:
+
+1.  **Inject Node:** Trigger every 15 minutes.
+2.  **HTTP Request:** GET `http://localhost:8444/status` (use `/status/refresh` sparingly to save 12V battery).
+3.  **Function Node:** Parse payload.
+4.  **Output:** Save to InfluxDB or send via MQTT.
+
+-----
+
+-----
+
+<a name="deutsche-version"\></a>
+
+## 🇦🇹 Deutsche Version
+
+### 1\. Übersicht
+
+Dieser Python-Server bietet eine einfache HTTP-Schnittstelle (API) zur Steuerung von Hyundai und Kia Fahrzeugen über die Bluelink/UVO-Dienste. Er basiert auf der **`hyundai_kia_connect_api`** Bibliothek und ist primär für den Betrieb als **Docker-Container** auf einem Raspberry Pi konzipiert.
+
+**Funktionen:**
+
+  * **Statusabfrage:** Abruf aus dem Cache (schnell) oder Live-Update vom Fahrzeug (langsam).
+  * **Fernsteuerung:** Verriegeln/Entriegeln, Klimaanlage, Laden starten/stoppen.
+  * **Zuverlässigkeit:** Automatisches Token-Management und Re-Login.
+  * **Monitoring:** Integration von **Synology Chat** für Benachrichtigungen bei kritischen Fehlern.
+  * **Docker:** Einfache Installation mittels Docker Compose.
+
+### 2\. Voraussetzungen
+
+  * Ein System mit Docker & Docker Compose (z.B. Raspberry Pi).
+  * Zugangsdaten für deinen Hyundai Bluelink / Kia Connect Account.
+  * (Optional) Synology Chat Webhook-URL für Alarmmeldungen.
+
+### 3\. Installation & Start (Docker)
+
+Dies ist der empfohlene Weg, den Server zu betreiben.
+
+#### 3.1 Repository klonen
+
+```bash
+git clone [https://github.com/bausi2k/hyundai-python-server.git](https://github.com/bausi2k/hyundai-python-server.git)
+cd hyundai-python-server
+```
+
+#### 3.2 Konfiguration (`.env`)
+
+Erstelle eine Datei namens `.env` im Projektverzeichnis:
+
+```bash
+vi .env
+```
+
+Füge folgenden Inhalt ein und passe deine Daten an:
+
+```ini
+# --- Zugangsdaten ---
+BLUELINK_USERNAME=deine_email@example.com
+BLUELINK_PASSWORD=DeinPasswort
+BLUELINK_PIN=1234
+BLUELINK_VIN=DEINE_17_STELLIGE_VIN
+
+# --- Einstellungen ---
+# 1 = Europa, 2 = USA, 3 = Kanada
+BLUELINK_REGION_ID=1
+# 1 = Kia, 2 = Hyundai
+BLUELINK_BRAND_ID=2
+# Interner Port im Container (auf 8080 lassen)
+PORT=8080
+# Log Level (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL=INFO
+
+# --- Synology Chat Alarme (Optional) ---
+SYNOLOGY_CHAT_ENABLED=true
+SYNOLOGY_CHAT_URL=https://deine-synology-url/webapi/entry.cgi?api=SYNO.Chat.External&method=incoming&version=2&token=...
+```
+
+#### 3.3 Server starten
+
+```bash
+docker compose up -d --build
+```
+
+Der Server ist nun unter `http://<IP-DEINES-PI>:8444` erreichbar (Port 8444 ist der Standard in der `docker-compose.yml`).
+
+#### 3.4 Logs ansehen
+
+```bash
+docker compose logs -f
+```
+
+### 4\. API Endpunkte
+
+Eine Übersicht erhältst du auch unter `GET /info`.
+
+| Methode | Pfad | Beschreibung |
+| :--- | :--- | :--- |
+| `GET` | `/info` | Zeigt API-Informationen und Version. |
+| `GET` | `/status` | Ruft den **gecacheten** Status ab (schnell). |
+| `GET` | `/status/refresh` | Erzwingt ein **Live-Update** vom Fahrzeug (langsam, ca. 20s). |
+| `POST` | `/lock` | Verriegelt das Fahrzeug. |
+| `POST` | `/unlock` | Entriegelt das Fahrzeug. |
+| `POST` | `/climate/start` | Startet Klima. Body: `{"temperature": 21, "defrost": false}` |
+| `POST` | `/climate/stop` | Stoppt Klima. |
+| `POST` | `/charge/start` | Startet Laden. |
+| `POST` | `/charge/stop` | Stoppt Laden. |
+| `GET` | `/odometer` | Kilometerstand (Cache). |
+| `GET` | `/odometer/refresh`| Kilometerstand (Live). |
+| `GET` | `/location` | Fahrzeugposition (Live). |
+
+### 5\. Integration mit Node-RED
+
+Die API antwortet mit JSON. Ein typischer Flow:
+
+1.  **Inject Node:** Alle 15 Min triggern.
+2.  **HTTP Request:** `GET http://localhost:8444/status` (Nutze `/status/refresh` sparsam, um die 12V Batterie zu schonen).
+3.  **Function Node:** Extrahiert `msg.payload.data`.
+4.  **Output:** Speichern in InfluxDB oder MQTT.
+
+### 6\. Manuelle Installation (Ohne Docker)
+
+Falls du den Server direkt als Python-Skript laufen lassen willst (z.B. zur Entwicklung):
+
+1.  **Setup:**
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+    ```
+2.  **Starten:**
+    ```bash
+    python3 hyundai_server.py
+    ```
+
+### 7\. Troubleshooting
+
+  * **Login Failed / 400 Bad Request:** Überprüfe Benutzername und Passwort in der `.env`. Logge dich einmal manuell in der offiziellen Bluelink App ein.
+  * **429 Too Many Requests:** Du sendest zu viele Befehle zu schnell hintereinander. Warte eine Minute (Cool-down Phase der API).
+  * **500 Internal Server Error:** Prüfe die Logs (`docker compose logs`). Wenn `SYNOLOGY_CHAT_ENABLED=true`, solltest du eine Nachricht erhalten haben.
 
 <!-- end list -->
 
