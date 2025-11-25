@@ -3,8 +3,7 @@ services:
     build: .
     container_name: hyundai-connect
     restart: unless-stopped
-    ports:
-      - "8444:8444"
+    network_mode: "host"  # <-- DIESE ZEILE HINZUFÜGEN
     volumes:
       # Mappe das Logfile nach außen, damit es nicht verloren geht
       - ./hyundai_server.log:/app/hyundai_server.log
