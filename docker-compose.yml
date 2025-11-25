@@ -1,0 +1,13 @@
+services:
+  hyundai-connect:
+    build: .
+    container_name: hyundai-connect
+    restart: unless-stopped
+    network_mode: "host"  # <-- DIESE ZEILE HINZUFÜGEN
+    volumes:
+      # Mappe das Logfile nach außen, damit es nicht verloren geht
+      - ./hyundai_server.log:/app/hyundai_server.log
+    env_file:
+      - .env
+    environment:
+      - TZ=Europe/Vienna # Setze deine Zeitzone für korrekte Log-Zeitstempel
