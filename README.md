@@ -243,7 +243,8 @@ Falls du den Server direkt als Python-Skript laufen lassen willst (z.B. zur Entw
   * **429 Too Many Requests:** Du sendest zu viele Befehle zu schnell hintereinander. Warte eine Minute (Cool-down Phase der API).
   * **500 Internal Server Error:** Prüfe die Logs (`docker compose logs`). Wenn `SYNOLOGY_CHAT_ENABLED=true`, solltest du eine Nachricht erhalten haben.
 
-<!-- end list -->
+## 🤝 Credits
 
-```
-```
+**#kiassisted** 🤖
+This project was created with the assistance of AI.
+Code architecture, logic, and documentation support provided by Gemini.
