@@ -1,4 +1,3 @@
-
 # Hyundai/Kia Connect API Server (Python) - v1.2.0
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
@@ -15,6 +14,8 @@
 
 ### 1. Overview
 This project provides a robust Python Flask API server to interact with Hyundai and Kia vehicles via their Bluelink/UVO Connect services. It leverages the **`hyundai_kia_connect_api`** library and is designed to run as a **Docker container** on a Raspberry Pi or any Linux system.
+
+
 
 **Key Features:**
 * **Status Retrieval:** Get cached status (fast) or force a live refresh from the car (slow).
@@ -36,7 +37,8 @@ This is the recommended way to run the server.
 ```bash
 git clone [https://github.com/bausi2k/hyundai-python-server.git](https://github.com/bausi2k/hyundai-python-server.git)
 cd hyundai-python-server
-````
+
+```
 
 #### 3.2 Configuration (`.env`)
 
@@ -44,6 +46,7 @@ Create a `.env` file in the project directory:
 
 ```bash
 vi .env
+
 ```
 
 Paste the following content and adapt it to your needs:
@@ -68,12 +71,14 @@ LOG_LEVEL=INFO
 # --- Synology Chat Alerts (Optional) ---
 SYNOLOGY_CHAT_ENABLED=true
 SYNOLOGY_CHAT_URL=https://your-synology-url/webapi/entry.cgi?api=SYNO.Chat.External&method=incoming&version=2&token=...
+
 ```
 
 #### 3.3 Start Server
 
 ```bash
 docker compose up -d --build
+
 ```
 
 The server will be accessible at `http://<YOUR-PI-IP>:8444` (default external port defined in `docker-compose.yml`).
@@ -82,17 +87,18 @@ The server will be accessible at `http://<YOUR-PI-IP>:8444` (default external po
 
 ```bash
 docker compose logs -f
+
 ```
 
-### 4\. API Endpoints
+### 4. API Endpoints
 
 You can check available endpoints via `GET /info`.
 
 | Method | Path | Description |
-| :--- | :--- | :--- |
+| --- | --- | --- |
 | `GET` | `/info` | Returns API info and version. |
 | `GET` | `/status` | Returns **cached** vehicle status (fast response). |
-| `GET` | `/status/refresh` | Forces a **live update** from the car (takes \~20s). |
+| `GET` | `/status/refresh` | Forces a **live update** from the car (takes ~20s). |
 | `POST` | `/lock` | Locks the vehicle. |
 | `POST` | `/unlock` | Unlocks the vehicle. |
 | `POST` | `/climate/start` | Starts climate. JSON Body: `{"temperature": 21, "defrost": false}` |
@@ -100,45 +106,45 @@ You can check available endpoints via `GET /info`.
 | `POST` | `/charge/start` | Starts charging. |
 | `POST` | `/charge/stop` | Stops charging. |
 | `GET` | `/odometer` | Returns odometer reading (cached). |
-| `GET` | `/odometer/refresh`| Returns odometer reading (live). |
+| `GET` | `/odometer/refresh` | Returns odometer reading (live). |
 | `GET` | `/location` | Returns GPS location (live). |
 
-### 5\. Node-RED Integration
+### 5. Node-RED Integration
 
 The API returns JSON responses containing a `"command_invoked"` field. Typical flow:
 
-1.  **Inject Node:** Trigger every 15 minutes.
-2.  **HTTP Request:** GET `http://localhost:8444/status` (use `/status/refresh` sparingly to save 12V battery).
-3.  **Function Node:** Parse payload.
-4.  **Output:** Save to InfluxDB or send via MQTT.
+1. **Inject Node:** Trigger every 15 minutes.
+2. **HTTP Request:** GET `http://localhost:8444/status` (use `/status/refresh` sparingly to save 12V battery).
+3. **Function Node:** Parse payload.
+4. **Output:** Save to InfluxDB or send via MQTT.
 
------
+---
 
------
+---
 
-<a name="deutsche-version"\></a>
+<a name="deutsche-version"></a>
 
 ## 🇦🇹 Deutsche Version
 
-### 1\. Übersicht
+### 1. Übersicht
 
 Dieser Python-Server bietet eine einfache HTTP-Schnittstelle (API) zur Steuerung von Hyundai und Kia Fahrzeugen über die Bluelink/UVO-Dienste. Er basiert auf der **`hyundai_kia_connect_api`** Bibliothek und ist primär für den Betrieb als **Docker-Container** auf einem Raspberry Pi konzipiert.
 
 **Funktionen:**
 
-  * **Statusabfrage:** Abruf aus dem Cache (schnell) oder Live-Update vom Fahrzeug (langsam).
-  * **Fernsteuerung:** Verriegeln/Entriegeln, Klimaanlage, Laden starten/stoppen.
-  * **Zuverlässigkeit:** Automatisches Token-Management und Re-Login.
-  * **Monitoring:** Integration von **Synology Chat** für Benachrichtigungen bei kritischen Fehlern.
-  * **Docker:** Einfache Installation mittels Docker Compose.
+* **Statusabfrage:** Abruf aus dem Cache (schnell) oder Live-Update vom Fahrzeug (langsam).
+* **Fernsteuerung:** Verriegeln/Entriegeln, Klimaanlage, Laden starten/stoppen.
+* **Zuverlässigkeit:** Automatisches Token-Management und Re-Login.
+* **Monitoring:** Integration von **Synology Chat** für Benachrichtigungen bei kritischen Fehlern.
+* **Docker:** Einfache Installation mittels Docker Compose.
 
-### 2\. Voraussetzungen
+### 2. Voraussetzungen
 
-  * Ein System mit Docker & Docker Compose (z.B. Raspberry Pi).
-  * Zugangsdaten für deinen Hyundai Bluelink / Kia Connect Account.
-  * (Optional) Synology Chat Webhook-URL für Alarmmeldungen.
+* Ein System mit Docker & Docker Compose (z.B. Raspberry Pi).
+* Zugangsdaten für deinen Hyundai Bluelink / Kia Connect Account.
+* (Optional) Synology Chat Webhook-URL für Alarmmeldungen.
 
-### 3\. Installation & Start (Docker)
+### 3. Installation & Start (Docker)
 
 Dies ist der empfohlene Weg, den Server zu betreiben.
 
@@ -147,6 +153,7 @@ Dies ist der empfohlene Weg, den Server zu betreiben.
 ```bash
 git clone [https://github.com/bausi2k/hyundai-python-server.git](https://github.com/bausi2k/hyundai-python-server.git)
 cd hyundai-python-server
+
 ```
 
 #### 3.2 Konfiguration (`.env`)
@@ -155,6 +162,7 @@ Erstelle eine Datei namens `.env` im Projektverzeichnis:
 
 ```bash
 vi .env
+
 ```
 
 Füge folgenden Inhalt ein und passe deine Daten an:
@@ -179,12 +187,14 @@ LOG_LEVEL=INFO
 # --- Synology Chat Alarme (Optional) ---
 SYNOLOGY_CHAT_ENABLED=true
 SYNOLOGY_CHAT_URL=https://deine-synology-url/webapi/entry.cgi?api=SYNO.Chat.External&method=incoming&version=2&token=...
+
 ```
 
 #### 3.3 Server starten
 
 ```bash
 docker compose up -d --build
+
 ```
 
 Der Server ist nun unter `http://<IP-DEINES-PI>:8444` erreichbar (Port 8444 ist der Standard in der `docker-compose.yml`).
@@ -193,14 +203,15 @@ Der Server ist nun unter `http://<IP-DEINES-PI>:8444` erreichbar (Port 8444 ist 
 
 ```bash
 docker compose logs -f
+
 ```
 
-### 4\. API Endpunkte
+### 4. API Endpunkte
 
 Eine Übersicht erhältst du auch unter `GET /info`.
 
 | Methode | Pfad | Beschreibung |
-| :--- | :--- | :--- |
+| --- | --- | --- |
 | `GET` | `/info` | Zeigt API-Informationen und Version. |
 | `GET` | `/status` | Ruft den **gecacheten** Status ab (schnell). |
 | `GET` | `/status/refresh` | Erzwingt ein **Live-Update** vom Fahrzeug (langsam, ca. 20s). |
@@ -211,38 +222,44 @@ Eine Übersicht erhältst du auch unter `GET /info`.
 | `POST` | `/charge/start` | Startet Laden. |
 | `POST` | `/charge/stop` | Stoppt Laden. |
 | `GET` | `/odometer` | Kilometerstand (Cache). |
-| `GET` | `/odometer/refresh`| Kilometerstand (Live). |
+| `GET` | `/odometer/refresh` | Kilometerstand (Live). |
 | `GET` | `/location` | Fahrzeugposition (Live). |
 
-### 5\. Integration mit Node-RED
+### 5. Integration mit Node-RED
 
 Die API antwortet mit JSON. Ein typischer Flow:
 
-1.  **Inject Node:** Alle 15 Min triggern.
-2.  **HTTP Request:** `GET http://localhost:8444/status` (Nutze `/status/refresh` sparsam, um die 12V Batterie zu schonen).
-3.  **Function Node:** Extrahiert `msg.payload.data`.
-4.  **Output:** Speichern in InfluxDB oder MQTT.
+1. **Inject Node:** Alle 15 Min triggern.
+2. **HTTP Request:** `GET http://localhost:8444/status` (Nutze `/status/refresh` sparsam, um die 12V Batterie zu schonen).
+3. **Function Node:** Extrahiert `msg.payload.data`.
+4. **Output:** Speichern in InfluxDB oder MQTT.
 
-### 6\. Manuelle Installation (Ohne Docker)
+### 6. Manuelle Installation (Ohne Docker)
 
 Falls du den Server direkt als Python-Skript laufen lassen willst (z.B. zur Entwicklung):
 
-1.  **Setup:**
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    ```
-2.  **Starten:**
-    ```bash
-    python3 hyundai_server.py
-    ```
+1. **Setup:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
-### 7\. Troubleshooting
+```
 
-  * **Login Failed / 400 Bad Request:** Überprüfe Benutzername und Passwort in der `.env`. Logge dich einmal manuell in der offiziellen Bluelink App ein.
-  * **429 Too Many Requests:** Du sendest zu viele Befehle zu schnell hintereinander. Warte eine Minute (Cool-down Phase der API).
-  * **500 Internal Server Error:** Prüfe die Logs (`docker compose logs`). Wenn `SYNOLOGY_CHAT_ENABLED=true`, solltest du eine Nachricht erhalten haben.
+
+2. **Starten:**
+```bash
+python3 hyundai_server.py
+
+```
+
+
+
+### 7. Troubleshooting
+
+* **Login Failed / 400 Bad Request:** Überprüfe Benutzername und Passwort in der `.env`. Logge dich einmal manuell in der offiziellen Bluelink App ein.
+* **429 Too Many Requests:** Du sendest zu viele Befehle zu schnell hintereinander. Warte eine Minute (Cool-down Phase der API).
+* **500 Internal Server Error:** Prüfe die Logs (`docker compose logs`). Wenn `SYNOLOGY_CHAT_ENABLED=true`, solltest du eine Nachricht erhalten haben.
 
 ## 🤝 Credits
 
@@ -251,4 +268,6 @@ This project was created with the assistance of AI.
 Code architecture, logic, and documentation support provided by Gemini.
 
 ---
+
 <a href="https://www.buymeacoffee.com/bausi2k" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
