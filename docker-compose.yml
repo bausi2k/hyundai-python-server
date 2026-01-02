@@ -6,7 +6,7 @@ services:
     network_mode: "host"  # <-- DIESE ZEILE HINZUFÜGEN
     volumes:
       # Mappe das Logfile nach außen, damit es nicht verloren geht
-      - ./hyundai_server.log:/app/hyundai_server.log
+      - ./logs:/app/logs
     env_file:
       - .env
     environment:
