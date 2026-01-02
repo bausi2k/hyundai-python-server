@@ -215,10 +215,13 @@ async def route_climate_start():
         if not vm: raise ConnectionError("VM not initialized")
         vm.check_and_refresh_token()
         data = request.get_json(silent=True) or {}
+        
+        # Parameter auslesen
         set_temp = data.get('temperature')
         defrost = data.get('defrost', False)
         climate = data.get('climate', True)
         heating = data.get('heating', False)
+        duration = data.get('duration') # NEU: Duration (in Minuten)
 
         temp_val = None
         if 'temperature' in data:
@@ -226,7 +229,24 @@ async def route_climate_start():
                  return create_response("climate_start", success=False, error_message="Invalid temp (16-30).", status_code=400)
             temp_val = float(set_temp)
 
-        options = ClimateRequestOptions(set_temp=temp_val, defrost=bool(defrost), climate=bool(climate), heating=bool(heating))
+        # NEU: Duration validieren und übergeben
+        duration_val = None
+        if duration is not None:
+            if isinstance(duration, int) and duration > 0:
+                duration_val = int(duration)
+            else:
+                # Optional: Fehler werfen oder ignorieren. Hier ignorieren wir ungültige Werte.
+                logging.warning(f"Invalid duration received: {duration}. Ignoring.")
+
+        # Options Objekt erstellen mit duration
+        options = ClimateRequestOptions(
+            set_temp=temp_val, 
+            defrost=bool(defrost), 
+            climate=bool(climate), 
+            heating=bool(heating),
+            duration=duration_val # <--- Wird hier an die Library übergeben
+        )
+        
         vehicle = find_vehicle()
         result = vm.start_climate(vehicle_id=vehicle.id, options=options)
         return create_response("climate_start", data={"result": result})
