@@ -3,6 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/Docker-Supported-2496ED.svg)](https://www.docker.com/)
+[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/bausi2k)
 
 **Navigation / Sprache wählen:**
 [🇺🇸 **English Version**](#-english-version) | [🇦🇹 **Deutsche Version**](#-deutsche-version)
@@ -248,3 +249,6 @@ Falls du den Server direkt als Python-Skript laufen lassen willst (z.B. zur Entw
 **#kiassisted** 🤖
 This project was created with the assistance of AI.
 Code architecture, logic, and documentation support provided by Gemini.
+
+---
+<a href="https://www.buymeacoffee.com/bausi2k" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
