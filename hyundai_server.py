@@ -5,9 +5,12 @@ import traceback
 import logging
 import threading
 import requests
+import base64  # <--- NEU
+import io      # <--- NEU
 from logging.handlers import TimedRotatingFileHandler
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
+from werkzeug.exceptions import HTTPException
 from hyundai_kia_connect_api import VehicleManager, ClimateRequestOptions, exceptions as hke
 
 # --- Configuration Load ---
@@ -15,7 +18,11 @@ load_dotenv()
 
 # --- Logging Setup ---
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-log_file = "hyundai_server.log"
+# WICHTIG: Logs in Unterordner, um Docker-Fehler zu vermeiden
+log_file = "logs/hyundai_server.log"
+
+# Ordner erstellen, falls er fehlt
+os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
@@ -27,6 +34,8 @@ stream_handler.setFormatter(log_formatter)
 
 logger = logging.getLogger()
 logger.setLevel(log_level)
+if logger.hasHandlers():
+    logger.handlers.clear()
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
@@ -150,13 +159,64 @@ async def force_refresh():
     return find_vehicle()
 
 # --- Routes ---
+
+@app.route('/favicon.ico')
+def favicon():
+    # Ein einfaches blaues 16x16 Icon als Base64 String
+    # (Erspart uns das Hantieren mit extra Dateien im Docker Container)
+    icon_data = """
+    AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    /wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/
+    AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8A
+    AAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAA
+    AP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA
+    /wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/
+    AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8A
+    AAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAA
+    AP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA
+    /wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/
+    AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8A
+    AAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAA
+    AP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA
+    /wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/
+    AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8A
+    AAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAA
+    AP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA
+    /wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/
+    AAAA////////////////////////////////////////////////////////////////////////
+    ////////
+    """
+    # Leerzeichen und Zeilenumbrüche entfernen
+    icon_data = icon_data.replace(" ", "").replace("\n", "")
+    
+    return send_file(
+        io.BytesIO(base64.b64decode(icon_data)),
+        mimetype='image/vnd.microsoft.icon'
+    )
+
 @app.route('/', methods=['GET'])
 def route_root():
     return create_response("root", data={"message": "Hyundai Server running."})
 
 @app.route('/info', methods=['GET'])
 def route_info():
-    return create_response("info", data={"version": "1.2.1", "endpoints": ["/status", "/status/refresh", "/lock", "/unlock", "/climate/start", "/climate/stop", "/charge/start", "/charge/stop"]})
+    return create_response("info", data={"version": "1.2.2", "endpoints": ["/status", "/status/refresh", "/lock", "/unlock", "/climate/start", "/climate/stop", "/charge/start", "/charge/stop"]})
 
 @app.route('/status', methods=['GET'])
 async def route_status_cached():
@@ -186,7 +246,6 @@ async def route_lock():
         vm.check_and_refresh_token()
         vehicle = find_vehicle()
         logging.debug(f"Calling vm.lock for {vehicle.id}...")
-        # FIX: Aufruf direkt auf vm
         result = vm.lock(vehicle.id)
         return create_response("lock", data={"result": result})
     except hke.DuplicateRequestError:
@@ -201,7 +260,6 @@ async def route_unlock():
         vm.check_and_refresh_token()
         vehicle = find_vehicle()
         logging.debug(f"Calling vm.unlock for {vehicle.id}...")
-        # FIX: Aufruf direkt auf vm
         result = vm.unlock(vehicle.id)
         return create_response("unlock", data={"result": result})
     except hke.DuplicateRequestError:
@@ -216,40 +274,49 @@ async def route_climate_start():
         vm.check_and_refresh_token()
         data = request.get_json(silent=True) or {}
         
-        # Parameter auslesen
+        # --- Parameter lesen ---
         set_temp = data.get('temperature')
         defrost = data.get('defrost', False)
         climate = data.get('climate', True)
         heating = data.get('heating', False)
-        duration = data.get('duration') # NEU: Duration (in Minuten)
+        duration = data.get('duration') 
 
+        # --- Temperatur Validierung ---
         temp_val = None
         if 'temperature' in data:
             if not isinstance(set_temp, (int, float)) or not (16 <= set_temp <= 30):
                  return create_response("climate_start", success=False, error_message="Invalid temp (16-30).", status_code=400)
             temp_val = float(set_temp)
 
-        # NEU: Duration validieren und übergeben
+        # --- Duration Validierung ---
         duration_val = None
         if duration is not None:
             if isinstance(duration, int) and duration > 0:
                 duration_val = int(duration)
-            else:
-                # Optional: Fehler werfen oder ignorieren. Hier ignorieren wir ungültige Werte.
-                logging.warning(f"Invalid duration received: {duration}. Ignoring.")
 
-        # Options Objekt erstellen mit duration
-        options = ClimateRequestOptions(
-            set_temp=temp_val, 
-            defrost=bool(defrost), 
-            climate=bool(climate), 
-            heating=bool(heating),
-            duration=duration_val # <--- Wird hier an die Library übergeben
-        )
+        # --- Options Objekt erstellen (NUR BASIS-FEATURES) ---
+        # Wir entfernen side_mirror, steering_wheel etc., da die Library crasht
+        climate_args = {
+            "set_temp": temp_val,
+            "defrost": bool(defrost),
+            "climate": bool(climate),
+            "heating": bool(heating),
+            "duration": duration_val
+        }
+
+        # Entferne 'None' Werte
+        climate_args = {k: v for k, v in climate_args.items() if v is not None}
+
+        logging.info(f"Starting climate with options: {climate_args}")
+
+        options = ClimateRequestOptions(**climate_args)
         
         vehicle = find_vehicle()
         result = vm.start_climate(vehicle_id=vehicle.id, options=options)
         return create_response("climate_start", data={"result": result})
+
+    except TypeError as te:
+        return create_response("climate_start", success=False, error_message=f"Library parameter error: {te}", status_code=500)
     except hke.DuplicateRequestError:
         return create_response("climate_start", success=False, error_message="Wait.", status_code=429)
     except Exception as e:
@@ -274,8 +341,6 @@ async def route_charge_start():
         if not vm: raise ConnectionError("VM not initialized")
         vm.check_and_refresh_token()
         vehicle = find_vehicle()
-        logging.debug(f"Calling vm.start_charge for {vehicle.id}...")
-        # FIX: Aufruf direkt auf vm
         result = vm.start_charge(vehicle.id)
         return create_response("charge_start", data={"result": result})
     except hke.DuplicateRequestError:
@@ -289,8 +354,6 @@ async def route_charge_stop():
         if not vm: raise ConnectionError("VM not initialized")
         vm.check_and_refresh_token()
         vehicle = find_vehicle()
-        logging.debug(f"Calling vm.stop_charge for {vehicle.id}...")
-        # FIX: Aufruf direkt auf vm
         result = vm.stop_charge(vehicle.id)
         return create_response("charge_stop", data={"result": result})
     except hke.DuplicateRequestError:
@@ -337,9 +400,15 @@ async def route_location():
     except Exception as e:
         return create_response("location", success=False, error_message=e, status_code=500)
 
+@app.errorhandler(404)
+def route_not_found(e):
+    logging.warning(f"404 Not Found: {request.path}")
+    return create_response("route_not_found", success=False, error_message="Endpoint not found.", status_code=404)
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    if isinstance(e, HTTPException):
+        return e
     logging.error(f"Unhandled Exception: {e}", exc_info=True)
     send_synology_alert(f"Unhandled Exception:\n```{e}```")
     return create_response("internal_server_error", success=False, error_message="Internal Server Error", status_code=500)
