@@ -1,0 +1,36 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy-Werte, damit der Server beim Import nicht abstürzt
+      BLUELINK_USERNAME: test@test.com
+      BLUELINK_PASSWORD: test
+      BLUELINK_PIN: 1234
+      BLUELINK_VIN: TESTVIN1234567890
+      BLUELINK_REGION_ID: 1
+      BLUELINK_BRAND_ID: 2
+      
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio pytest-mock
+
+    - name: Run Pytest
+      run: |
+        pytest test_server.py
