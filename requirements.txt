@@ -1,5 +1,4 @@
-flask
+flask[async]
 python-dotenv
 requests
-# Wir erzwingen die Installation direkt von GitHub, um die neuesten Features (side_mirror etc.) zu haben
 git+https://github.com/Hyundai-Kia-Connect/hyundai_kia_connect_api.git@master
