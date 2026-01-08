@@ -294,8 +294,8 @@ async def route_climate_start():
             if isinstance(duration, int) and duration > 0:
                 duration_val = int(duration)
 
-        # --- Options Objekt erstellen (NUR BASIS-FEATURES) ---
-        # Wir entfernen side_mirror, steering_wheel etc., da die Library crasht
+        # --- Options Objekt erstellen (SAFE MODE) ---
+        # Wir entfernen alle Parameter, die Version 3.52.1 noch nicht kennt
         climate_args = {
             "set_temp": temp_val,
             "defrost": bool(defrost),
@@ -307,7 +307,7 @@ async def route_climate_start():
         # Entferne 'None' Werte
         climate_args = {k: v for k, v in climate_args.items() if v is not None}
 
-        logging.info(f"Starting climate with options: {climate_args}")
+        logging.info(f"🚀 Sending climate request with options: {climate_args}")
 
         options = ClimateRequestOptions(**climate_args)
         

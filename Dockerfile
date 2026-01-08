@@ -1,22 +1,30 @@
-# Verwende ein schlankes Python-Image als Basis
+# Wir nutzen ein schlankes Python 3.11 Image
 FROM python:3.11-slim
 
-# Setze das Arbeitsverzeichnis im Container
+# Umgebungsvariablen setzen (verhindert .pyc Dateien und Pufferung)
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Arbeitsverzeichnis im Container
 WORKDIR /app
 
-# Kopiere requirements.txt zuerst, um Docker-Cache zu nutzen
-COPY requirements.txt .
+# System-Abhängigkeiten installieren (git wird für die Installation der Library benötigt)
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Installiere Abhängigkeiten
-# --no-cache-dir hält das Image klein
+# Requirements kopieren und installieren
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Kopiere den restlichen Code
+# Den restlichen Code kopieren
 COPY . .
 
-# Exponiere den Port (dokumentarisch)
-EXPOSE 8444
+# Ordner für Logs erstellen (wichtig für deinen Code!)
+RUN mkdir -p logs
 
-# Definiere den Startbefehl
-# Unbuffered output sorgt dafür, dass Logs sofort in 'docker logs' erscheinen
-CMD ["python", "-u", "hyundai_server.py"]
+# Port freigeben
+EXPOSE 8080
+
+# Server starten
+CMD ["python", "hyundai_server.py"]

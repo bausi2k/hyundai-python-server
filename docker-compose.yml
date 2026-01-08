@@ -1,13 +1,14 @@
 services:
-  hyundai-connect:
-    build: .
-    container_name: hyundai-connect
+  hyundai-server:
+    # NEU: Wir laden das fertige Image aus dem Internet
+    image: bausi2k/hyundai-python-server:latest
+    # ALT: build: .  <-- Das brauchen wir nicht mehr!
+    
+    container_name: hyundai_server
     restart: unless-stopped
-    network_mode: "host"  # <-- DIESE ZEILE HINZUFÜGEN
+    ports:
+      - "8444:8080"
     volumes:
-      # Mappe das Logfile nach außen, damit es nicht verloren geht
       - ./logs:/app/logs
     env_file:
       - .env
-    environment:
-      - TZ=Europe/Vienna # Setze deine Zeitzone für korrekte Log-Zeitstempel
