@@ -216,7 +216,7 @@ def route_root():
 
 @app.route('/info', methods=['GET'])
 def route_info():
-    return create_response("info", data={"version": "1.2.2", "endpoints": ["/status", "/status/refresh", "/lock", "/unlock", "/climate/start", "/climate/stop", "/charge/start", "/charge/stop"]})
+    return create_response("info", data={"version": "2.0.0", "endpoints": ["/status", "/status/refresh", "/lock", "/unlock", "/climate/start", "/climate/stop", "/charge/start", "/charge/stop"]})
 
 @app.route('/status', methods=['GET'])
 async def route_status_cached():

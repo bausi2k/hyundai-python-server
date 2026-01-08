@@ -3,17 +3,32 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ "main" ]
-    # Feuert den Build ab, wenn du auf 'main' pushst
+    # Workflow startet auch, wenn wir Tags pushen, die mit 'v' beginnen (z.B. v2.0.0)
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # QEMU erlaubt es, ARM-Images (für Raspberry Pi) auf Intel-Servern zu bauen
+      # Metadaten für Docker generieren (automatische Tags)
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/hyundai-python-server
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=tag
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -31,8 +46,7 @@ jobs:
         with:
           context: .
           push: true
-          # Baut für normale PCs (amd64) UND Raspberry Pi (arm64)
           platforms: linux/amd64,linux/arm64
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/hyundai-python-server:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/hyundai-python-server:v1.2.0
+          # Hier nutzen wir jetzt die automatisch generierten Tags
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
