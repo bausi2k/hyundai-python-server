@@ -33,4 +33,4 @@ jobs:
 
     - name: Run Pytest
       run: |
-        pytest test_server.py
+        pytest ./tests/test_server.py
