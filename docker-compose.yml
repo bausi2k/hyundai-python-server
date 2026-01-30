@@ -1,0 +1,12 @@
+services:
+  hyundai-server:
+    # NEU: Die Adresse zeigt jetzt auf GitHub
+    image: ghcr.io/bausi2k/hyundai-python-server:latest
+    
+    container_name: hyundai_server
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./logs:/app/logs
+    env_file:
+      - .env

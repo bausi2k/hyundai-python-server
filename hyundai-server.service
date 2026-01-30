@@ -1,0 +1,25 @@
+[Unit]
+Description=Hyundai/Kia Connect API Server (Python)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/hyundai-python-server
+
+
+ExecStart=/home/pi/hyundai-python-server/venv/bin/python3 /home/pi/hyundai-python-server/hyundai_server.py
+
+EnvironmentFile=/home/pi/hyundai-python-server/.env
+Restart=on-failure
+RestartSec=10
+# RuntimeMaxSec=6h # Optional: Periodischen Neustart bei Bedarf wieder hinzufügen
+
+# StandardOutput/Error nicht mehr auf journal setzen, da das Skript in eine Datei loggt
+# StandardOutput=null
+# StandardError=null # Oder lasse sie weg, systemd loggt dann Start/Stop-Ereignisse
+
+[Install]
+WantedBy=multi-user.target

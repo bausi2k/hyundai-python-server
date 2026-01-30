@@ -1,0 +1,4 @@
+flask[async]
+python-dotenv
+requests
+git+https://github.com/Hyundai-Kia-Connect/hyundai_kia_connect_api.git@master
